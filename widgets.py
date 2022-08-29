@@ -12,7 +12,10 @@ from PyQt6.QtWidgets import (
     QStackedLayout,
     QVBoxLayout,
     QWidget,
+    QListView,
+    QTableView
 )
+from datetime import datetime
 
 #TODO
 class CategoryWidget(QWidget):
@@ -100,7 +103,7 @@ class RoundedButton(QPushButton):
         self.label = text
         self.setText(self.label)
         self.color = color
-        self.bordersize = 2
+        self.bordersize = 10
         self.font = QtGui.QFont()
         self.font.setFamily('Times')
         self.font.setBold(True)
@@ -129,24 +132,55 @@ class RoundedButton(QPushButton):
 
     def mousePressEvent(self, e):
         #TODO: add editable task widget to TaskList
-        print("Hello")
+        print("Clicked %s" % self.label)
 
 #TODO
 class TaskListWidget(QWidget):
 
-    def __init__(self):
+    def __init__(self, model):
         super().__init__()
-        #TODO: load all tasks from database
-        self.tasks = []
 
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Task 1"))
-        layout.addWidget(QLabel("Task 2"))
-        layout.addWidget(QLabel("Task 3"))
-        self.setLayout(layout)
+        self.taskList = QTableView()
+        self.taskList.setModel(model)
+        self.taskList.setMinimumSize(100, 100)
+
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.taskList)
+        self.setLayout(self.layout)
 
 #TODO
 class TaskWidget(QWidget):
     
     def __init__(self):
         super(TaskWidget, self).__init__()
+
+class TaskModel(QtCore.QAbstractTableModel):
+    def __init__(self, *args, tasks=None, **kwargs):
+        super(TaskModel, self).__init__(*args, **kwargs)
+        self.tasks = tasks or []
+
+    def data(self, index, role):
+        value = self.tasks[index.row()][index.column()]
+
+        if role == Qt.ItemDataRole.DisplayRole:
+            if index.column() == 0:
+                return None
+
+            if isinstance(value, datetime):
+                return value.strftime('%d-%m-%Y')
+
+            return value
+        
+        if role == Qt.ItemDataRole.DecorationRole:
+            if isinstance(value, bool):
+                if value:
+                    return QtGui.QIcon('tick.png')
+        
+        #if role == Qt.ItemDataRole.BackgroundRole:
+        #    return QtGui.QColor(self.tasks[index.row()][-1])
+
+    def rowCount(self, index):
+        return len(self.tasks)
+
+    def columnCount(self, index):
+        return 5

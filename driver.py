@@ -9,17 +9,22 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QPalette, QColor
 from widgets import *
 import sys
+from datetime import datetime
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle("Task Tracker")
-        self.setFixedSize(QSize(400, 300))
+        #self.setFixedSize(QSize(500, 500))
+
+        #TODO: load all tasks from database
+        tasks = [(True, 'task 1', 'class 1', datetime(2019, 5, 4), 'blue')]
+        self.model = TaskModel(tasks=tasks)
 
         # global layout
         layout = QVBoxLayout()
-        layout.addWidget(TaskListWidget())
+        layout.addWidget(TaskListWidget(self.model))
         layout.addWidget(CategoryWidget())
 
         widget = QWidget()
