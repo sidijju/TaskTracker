@@ -1,5 +1,6 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtGui import QPainter, QPainterPath, QBrush, QPen, QColor, QFontMetrics
+from PyQt6.QtCore import QSize, Qt, QRectF
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -30,12 +31,12 @@ class CategoryWidget(QWidget):
         for i in range(len(self.categories)):
             self.categoryButtons[self.categories[i]] = RoundedButton(self.categories[i], self.colors[i])
 
-        layout = QHBoxLayout()
-        layout.addWidget(self.addCategory)
+        self.layout = QHBoxLayout()
+        self.layout.addWidget(self.addCategory)
         for button in self.categoryButtons.values():
-            layout.addWidget(button)
+            self.layout.addWidget(button)
 
-        self.setLayout(layout)
+        self.setLayout(self.layout)        
 
     def addCategoryWindow(self):
         self.w = AddCategoryWindow()
@@ -45,10 +46,11 @@ class CategoryWidget(QWidget):
     def addCategoryButton(self, info):
         self.w.close()
         self.w = None
-        self.categoryButtons[info[0]] = RoundedButton(info[0], info[1])
+        button = RoundedButton(info[0], info[1])
+        self.categoryButtons[info[0]] = button
+        self.layout.addWidget(button)
         self.update()
         
-
 class AddCategoryWindow(QWidget):
 
     categoryInfo = QtCore.pyqtSignal(object)
@@ -70,6 +72,7 @@ class AddCategoryWindow(QWidget):
         #color selector
         self.colorSelector = QComboBox()
         self.color = self.colors[0]
+        self.colorSelector.addItems(self.colors)
         self.colorSelector.currentTextChanged.connect(self.colorChanged)
 
         #done button
@@ -91,22 +94,42 @@ class AddCategoryWindow(QWidget):
         self.categoryInfo.emit((self.name, self.color))
 
 #TODO
-class RoundedButton(QWidget):
+class RoundedButton(QPushButton):
     def __init__(self, text, color):
         super(RoundedButton, self).__init__()
         self.label = text
+        self.setText(self.label)
         self.color = color
+        self.bordersize = 2
+        self.font = QtGui.QFont()
+        self.font.setFamily('Times')
+        self.font.setBold(True)
 
     def paintEvent(self, e):
-        painter = QtGui.QPainter(self)
-        brush = QtGui.QBrush()
-        brush.setColor(QtGui.QColor(self.color))
-        brush.setStyle(Qt.BrushStyle.SolidPattern)
-        painter.drawRoundedRect(10, 10, 20, 10, 5, 5)
+        painter = QPainter(self)
+        pen = QtGui.QPen()
+        path = QPainterPath()
+        pen = QPen(QColor(self.color))
+        painter.setPen(pen)
+        brush = QBrush(QColor(self.color))
+        painter.setBrush(brush)
+        
+        #rounded rect
+        rect = QRectF(e.rect())
+        rect.adjust(self.bordersize/2, self.bordersize/2, -self.bordersize/2, -self.bordersize/2)
+        path.addRoundedRect(rect, 10, 10)
+        painter.setClipPath(path)
+        painter.fillPath(path, painter.brush())
+        painter.strokePath(path, painter.pen())
+
+        #text
+        painter.setPen(QPen(QColor('white')))
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, self.label)
+        painter.end()
 
     def mousePressEvent(self, e):
         #TODO: add editable task widget to TaskList
-        pass
+        print("Hello")
 
 #TODO
 class TaskListWidget(QWidget):
