@@ -23,9 +23,6 @@ class CategoryWidget(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.addCategory = RoundedButton("Add Category", 'gray')
-        self.addCategory.clicked.connect(self.addCategoryWindow)
-
         #TODO: load past categories and colors from database
         self.categories = []
         self.colors = []
@@ -35,7 +32,6 @@ class CategoryWidget(QWidget):
             self.categoryButtons[self.categories[i]] = RoundedButton(self.categories[i], self.colors[i])
 
         self.layout = QHBoxLayout()
-        self.layout.addWidget(self.addCategory)
         for button in self.categoryButtons.values():
             self.layout.addWidget(button)
 
@@ -95,8 +91,6 @@ class AddCategoryWindow(QWidget):
 
     def returnInfo(self):
         self.categoryInfo.emit((self.name, self.color))
-
-#TODO
 class RoundedButton(QPushButton):
     def __init__(self, text, color):
         super(RoundedButton, self).__init__()
@@ -130,7 +124,6 @@ class RoundedButton(QPushButton):
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, self.label)
         painter.end()
 
-#TODO
 class TaskListWidget(QWidget):
 
     def __init__(self, model):
@@ -145,7 +138,6 @@ class TaskListWidget(QWidget):
         self.taskList.setSortingEnabled(True)
         self.taskList.sortByColumn(1, Qt.SortOrder.AscendingOrder)
         self.taskList.reset()
-        #self.taskList.show()
 
         #aesthetic
         self.taskList.setMinimumSize(100, 100)
@@ -212,3 +204,7 @@ class TaskModel(QtCore.QAbstractTableModel):
             else:
                 self.tasks[index.row()][0] = False
             return True
+
+    def refresh(self):
+        self.tasks = [t for t in self.tasks if not t[0]]
+        self.layoutChanged.emit()

@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QPalette, QColor
 from widgets import *
-import sys
 from datetime import datetime
 
 class MainWindow(QMainWindow):
@@ -23,10 +22,18 @@ class MainWindow(QMainWindow):
                  [False, datetime(2022, 5, 4), 'class 2', 'task 2', 'blue']]
         self.model = TaskModel(tasks=tasks, cols=['', 'Due Date', 'Category', 'Description', 'Color'])
 
-        # global layout
         layout = QVBoxLayout()
         layout.addWidget(TaskListWidget(self.model))
-        layout.addWidget(CategoryWidget())
+        hlayout = QHBoxLayout()
+        catwidget = CategoryWidget()
+        refresh = RoundedButton("Refresh", "red")
+        refresh.clicked.connect(self.model.refresh)
+        hlayout.addWidget(refresh)
+        addCategory = RoundedButton("Add Category", 'gray')
+        addCategory.clicked.connect(catwidget.addCategoryWindow)
+        hlayout.addWidget(addCategory)
+        layout.addLayout(hlayout)
+        layout.addWidget(catwidget)
 
         widget = QWidget()
         widget.setLayout(layout)
