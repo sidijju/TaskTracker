@@ -1,6 +1,6 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtGui import QPainter, QPainterPath, QBrush, QPen, QColor, QFontMetrics
-from PyQt6.QtCore import QSize, Qt, QRectF
+from PyQt6.QtCore import QSize, Qt, QRectF, QSortFilterProxyModel
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -23,7 +23,7 @@ class CategoryWidget(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.addCategory = QPushButton("Add Category")
+        self.addCategory = RoundedButton("Add Category", 'gray')
         self.addCategory.clicked.connect(self.addCategoryWindow)
 
         #TODO: load past categories and colors from database
@@ -130,10 +130,6 @@ class RoundedButton(QPushButton):
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, self.label)
         painter.end()
 
-    def mousePressEvent(self, e):
-        #TODO: add editable task widget to TaskList
-        print("Clicked %s" % self.label)
-
 #TODO
 class TaskListWidget(QWidget):
 
@@ -141,46 +137,78 @@ class TaskListWidget(QWidget):
         super().__init__()
 
         self.taskList = QTableView()
-        self.taskList.setModel(model)
+
+        #due date sorting
+        proxyModel = QSortFilterProxyModel()
+        proxyModel.setSourceModel(model)
+        self.taskList.setModel(proxyModel)
+        self.taskList.setSortingEnabled(True)
+        self.taskList.sortByColumn(1, Qt.SortOrder.AscendingOrder)
+        self.taskList.reset()
+        #self.taskList.show()
+
+        #aesthetic
         self.taskList.setMinimumSize(100, 100)
+        self.taskList.setColumnWidth(0, 30)
+        self.taskList.horizontalHeader().setStretchLastSection(True)
 
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.taskList)
         self.setLayout(self.layout)
 
-#TODO
-class TaskWidget(QWidget):
-    
-    def __init__(self):
-        super(TaskWidget, self).__init__()
-
 class TaskModel(QtCore.QAbstractTableModel):
-    def __init__(self, *args, tasks=None, **kwargs):
+    def __init__(self, *args, tasks=None, cols=None, **kwargs):
         super(TaskModel, self).__init__(*args, **kwargs)
         self.tasks = tasks or []
+        self.cols = cols
 
     def data(self, index, role):
         value = self.tasks[index.row()][index.column()]
 
         if role == Qt.ItemDataRole.DisplayRole:
-            if index.column() == 0:
-                return None
-
             if isinstance(value, datetime):
                 return value.strftime('%d-%m-%Y')
+            
+            if isinstance(value, bool):
+                return None
 
             return value
         
-        if role == Qt.ItemDataRole.DecorationRole:
-            if isinstance(value, bool):
-                if value:
-                    return QtGui.QIcon('tick.png')
+        #if role == Qt.ItemDataRole.DecorationRole:
         
-        #if role == Qt.ItemDataRole.BackgroundRole:
-        #    return QtGui.QColor(self.tasks[index.row()][-1])
+        if role == Qt.ItemDataRole.BackgroundRole and index.column() == 3:
+            return QtGui.QColor(self.tasks[index.row()][-1])
+
+        if role == Qt.ItemDataRole.CheckStateRole:
+            if index.column() == 0:
+                if self.tasks[index.row()][0] == True:
+                    return Qt.CheckState.Checked
+                return Qt.CheckState.Unchecked
 
     def rowCount(self, index):
         return len(self.tasks)
 
     def columnCount(self, index):
-        return 5
+        return len(self.tasks[0])-1
+
+    def headerData(self, section, orientation, role):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                if self.cols:
+                    return str(self.cols[section])
+
+            if orientation == Qt.Orientation.Vertical:
+                return str(section+1)
+
+    def flags(self, index):
+        if index.column() == 0:
+            return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable
+        return Qt.ItemFlag.ItemIsEnabled
+
+    def setData(self, index, value, role):
+        if role == Qt.ItemDataRole.CheckStateRole and index.column() == 0:
+            if value == Qt.CheckState.Checked.value:
+                self.tasks[index.row()][0] = True
+            else:
+                self.tasks[index.row()][0] = False
+            return True

@@ -16,11 +16,12 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Task Tracker")
-        #self.setFixedSize(QSize(500, 500))
+        self.setFixedSize(QSize(500, 400))
 
         #TODO: load all tasks from database
-        tasks = [(True, 'task 1', 'class 1', datetime(2019, 5, 4), 'blue')]
-        self.model = TaskModel(tasks=tasks)
+        tasks = [[False, datetime(2019, 5, 4), 'class 1', 'task 1', 'red'],
+                 [False, datetime(2022, 5, 4), 'class 2', 'task 2', 'blue']]
+        self.model = TaskModel(tasks=tasks, cols=['', 'Due Date', 'Category', 'Description', 'Color'])
 
         # global layout
         layout = QVBoxLayout()
