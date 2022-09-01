@@ -46,10 +46,16 @@ class CategoryWidget(QWidget):
         self.w.close()
         self.w = None
         button = RoundedButton(info[0], info[1])
+        def addTask():
+            self.w = AddTaskWindow()
+            self.w.show()
+            #TODO replace with addTask function
+            self.w.taskInfo.connect(lambda x: print(info[0]))
+        button.clicked.connect(addTask)
         self.categoryButtons[info[0]] = button
         self.layout.addWidget(button)
         self.update()
-        
+
 class AddCategoryWindow(QWidget):
 
     categoryInfo = QtCore.pyqtSignal(object)
@@ -91,6 +97,39 @@ class AddCategoryWindow(QWidget):
 
     def returnInfo(self):
         self.categoryInfo.emit((self.name, self.color))
+class AddTaskWindow(QWidget):
+
+    taskInfo = QtCore.pyqtSignal(object)
+
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout()
+
+        #text field
+        self.textField = QLineEdit()
+        self.textField.setMaxLength(20)
+        self.textField.setPlaceholderText("Task Description")
+        self.desc = "Blank"
+        self.textField.editingFinished.connect(self.textInput)
+
+        #color selector
+        self.dateSelector = QtWidgets.QDateEdit(calendarPopup=True)
+        self.dateSelector.setDateTime(QtCore.QDateTime.currentDateTime())
+
+        #done button
+        self.doneButton = QPushButton("Done")
+        self.doneButton.clicked.connect(self.returnInfo)
+
+        layout.addWidget(self.textField)
+        layout.addWidget(self.dateSelector)
+        layout.addWidget(self.doneButton)
+        self.setLayout(layout)
+
+    def textInput(self):
+        self.desc = self.textField.text()
+
+    def returnInfo(self):
+        self.taskInfo.emit((self.desc, self.dateSelector.date()))
 class RoundedButton(QPushButton):
     def __init__(self, text, color):
         super(RoundedButton, self).__init__()
@@ -123,7 +162,6 @@ class RoundedButton(QPushButton):
         painter.setPen(QPen(QColor('white')))
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, self.label)
         painter.end()
-
 class TaskListWidget(QWidget):
 
     def __init__(self, model):
@@ -147,7 +185,6 @@ class TaskListWidget(QWidget):
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.taskList)
         self.setLayout(self.layout)
-
 class TaskModel(QtCore.QAbstractTableModel):
     def __init__(self, *args, tasks=None, cols=None, **kwargs):
         super(TaskModel, self).__init__(*args, **kwargs)
@@ -208,3 +245,4 @@ class TaskModel(QtCore.QAbstractTableModel):
     def refresh(self):
         self.tasks = [t for t in self.tasks if not t[0]]
         self.layoutChanged.emit()
+
