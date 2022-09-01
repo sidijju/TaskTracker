@@ -8,7 +8,8 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QVBoxLayout,
     QWidget,
-    QTableView
+    QTableView,
+    QColorDialog
 )
 from datetime import datetime
 
@@ -51,9 +52,6 @@ class AddCategoryWindow(QWidget):
 
     categoryInfo = QtCore.pyqtSignal(object)
 
-    #TODO: maybe make color wheel later
-    colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'gray', 'black']
-
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout()
@@ -66,10 +64,9 @@ class AddCategoryWindow(QWidget):
         self.textField.textEdited.connect(self.text_input)
 
         #color selector
-        self.colorSelector = QComboBox()
-        self.color = self.colors[0]
-        self.colorSelector.addItems(self.colors)
-        self.colorSelector.currentTextChanged.connect(self.colorChanged)
+        self.dialog = QColorDialog()
+        self.colorSelector = QPushButton("Select Color")
+        self.colorSelector.clicked.connect(self.showColorDialog)
 
         #done button
         self.doneButton = QPushButton("Done")
@@ -80,11 +77,12 @@ class AddCategoryWindow(QWidget):
         layout.addWidget(self.doneButton)
         self.setLayout(layout)
 
+    def showColorDialog(self):
+        color = self.dialog.getColor()
+        self.color = color.name()
+
     def text_input(self):
         self.name = self.textField.text()
-
-    def colorChanged(self, s):
-        self.color = s
 
     def returnInfo(self):
         self.categoryInfo.emit((self.name, self.color))

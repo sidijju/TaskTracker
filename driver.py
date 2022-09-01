@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(TaskListWidget(self.model))
         hlayout = QHBoxLayout()
         self.catwidget = CategoryWidget(self.model, self.categories, self.colors)
-        refresh = RoundedButton("Save", "red")
+        refresh = RoundedButton("Save", "green")
         refresh.clicked.connect(self.model.save)
         hlayout.addWidget(refresh)
         addCategory = RoundedButton("Add Category", 'gray')
