@@ -139,13 +139,8 @@ class TaskListWidget(QWidget):
         self.taskList = QTableView()
 
         #due date sorting
-        #TODO custom proxy filter model for correct date sorting
-        proxyModel = QSortFilterProxyModel()
-        proxyModel.setSourceModel(model)
-        self.taskList.setModel(proxyModel)
         self.taskList.setSortingEnabled(True)
-        self.taskList.sortByColumn(1, Qt.SortOrder.AscendingOrder)
-        self.taskList.reset()
+        self.taskList.setModel(model)
 
         #aesthetic
         self.taskList.setMinimumSize(100, 100)
@@ -155,6 +150,7 @@ class TaskListWidget(QWidget):
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.taskList)
         self.setLayout(self.layout)
+
 class TaskModel(QtCore.QAbstractTableModel):
     def __init__(self, *args, tasks=None, cols=None, **kwargs):
         super(TaskModel, self).__init__(*args, **kwargs)
@@ -228,5 +224,13 @@ class TaskModel(QtCore.QAbstractTableModel):
     def addTask(self, info):
         self.tasks.append([False, datetime.today(), info[0], "Task Description", info[1]])
         self.layoutChanged.emit()
+
+    def sort(self, col, order):
+        if col == 1:
+            if order == Qt.SortOrder.AscendingOrder:
+                self.tasks.sort(key = lambda x: x[1])
+            elif order == Qt.SortOrder.DescendingOrder:
+                self.tasks.sort(key = lambda x: x[1], reverse = True)
+            self.layoutChanged.emit()
         
 
