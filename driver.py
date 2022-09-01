@@ -9,6 +9,11 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QPalette, QColor
 from widgets import *
 from datetime import datetime
+import sys
+
+def trace(frame, event, arg):
+    print("%s, %s:%d" % (event, frame.f_code.co_filename, frame.f_lineno))
+    return trace
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -25,7 +30,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(TaskListWidget(self.model))
         hlayout = QHBoxLayout()
-        catwidget = CategoryWidget()
+        catwidget = CategoryWidget(self.model)
         refresh = RoundedButton("Refresh", "red")
         refresh.clicked.connect(self.model.refresh)
         hlayout.addWidget(refresh)
@@ -46,4 +51,5 @@ window = MainWindow()
 window.show()  # IMPORTANT!!!!! Windows are hidden by default.
 
 # Start the event loop.
+#sys.settrace(trace)
 app.exec()

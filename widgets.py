@@ -1,3 +1,4 @@
+from functools import partial
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtGui import QPainter, QPainterPath, QBrush, QPen, QColor, QFontMetrics
 from PyQt6.QtCore import QSize, Qt, QRectF, QSortFilterProxyModel
@@ -17,19 +18,25 @@ from PyQt6.QtWidgets import (
 )
 from datetime import datetime
 
-#TODO
+import faulthandler
+
+faulthandler.enable()
+
 class CategoryWidget(QWidget):
 
-    def __init__(self):
+    def __init__(self, model):
         super().__init__()
 
         #TODO: load past categories and colors from database
         self.categories = []
         self.colors = []
         self.categoryButtons = {}
+        self.model = model
 
         for i in range(len(self.categories)):
-            self.categoryButtons[self.categories[i]] = RoundedButton(self.categories[i], self.colors[i])
+            b = RoundedButton(self.categories[i], self.colors[i])
+            b.clicked.connect(lambda: self.model.addTask((self.categories[i], self.colors[i])))
+            self.categoryButtons[self.categories[i]] = b
 
         self.layout = QHBoxLayout()
         for button in self.categoryButtons.values():
@@ -41,20 +48,15 @@ class CategoryWidget(QWidget):
         self.w = AddCategoryWindow()
         self.w.show()
         self.w.categoryInfo.connect(self.addCategoryButton)
-
+    
     def addCategoryButton(self, info):
         self.w.close()
         self.w = None
         button = RoundedButton(info[0], info[1])
-        def addTask():
-            self.w = AddTaskWindow()
-            self.w.show()
-            #TODO replace with addTask function
-            self.w.taskInfo.connect(lambda x: print(info[0]))
-        button.clicked.connect(addTask)
+        button.clicked.connect(lambda: self.model.addTask(info))
         self.categoryButtons[info[0]] = button
         self.layout.addWidget(button)
-        self.update()
+        self.update()        
 
 class AddCategoryWindow(QWidget):
 
@@ -72,7 +74,7 @@ class AddCategoryWindow(QWidget):
         self.textField.setMaxLength(10)
         self.textField.setPlaceholderText("Category Name")
         self.name = "Default"
-        self.textField.editingFinished.connect(self.text_input)
+        self.textField.textEdited.connect(self.text_input)
 
         #color selector
         self.colorSelector = QComboBox()
@@ -97,39 +99,6 @@ class AddCategoryWindow(QWidget):
 
     def returnInfo(self):
         self.categoryInfo.emit((self.name, self.color))
-class AddTaskWindow(QWidget):
-
-    taskInfo = QtCore.pyqtSignal(object)
-
-    def __init__(self):
-        super().__init__()
-        layout = QVBoxLayout()
-
-        #text field
-        self.textField = QLineEdit()
-        self.textField.setMaxLength(20)
-        self.textField.setPlaceholderText("Task Description")
-        self.desc = "Blank"
-        self.textField.editingFinished.connect(self.textInput)
-
-        #color selector
-        self.dateSelector = QtWidgets.QDateEdit(calendarPopup=True)
-        self.dateSelector.setDateTime(QtCore.QDateTime.currentDateTime())
-
-        #done button
-        self.doneButton = QPushButton("Done")
-        self.doneButton.clicked.connect(self.returnInfo)
-
-        layout.addWidget(self.textField)
-        layout.addWidget(self.dateSelector)
-        layout.addWidget(self.doneButton)
-        self.setLayout(layout)
-
-    def textInput(self):
-        self.desc = self.textField.text()
-
-    def returnInfo(self):
-        self.taskInfo.emit((self.desc, self.dateSelector.date()))
 class RoundedButton(QPushButton):
     def __init__(self, text, color):
         super(RoundedButton, self).__init__()
@@ -170,6 +139,7 @@ class TaskListWidget(QWidget):
         self.taskList = QTableView()
 
         #due date sorting
+        #TODO custom proxy filter model for correct date sorting
         proxyModel = QSortFilterProxyModel()
         proxyModel.setSourceModel(model)
         self.taskList.setModel(proxyModel)
@@ -196,14 +166,12 @@ class TaskModel(QtCore.QAbstractTableModel):
 
         if role == Qt.ItemDataRole.DisplayRole:
             if isinstance(value, datetime):
-                return value.strftime('%d-%m-%Y')
+                return value.strftime('%m-%d-%Y')
             
             if isinstance(value, bool):
                 return None
 
             return value
-        
-        #if role == Qt.ItemDataRole.DecorationRole:
         
         if role == Qt.ItemDataRole.BackgroundRole and index.column() == 3:
             return QtGui.QColor(self.tasks[index.row()][-1])
@@ -232,7 +200,7 @@ class TaskModel(QtCore.QAbstractTableModel):
     def flags(self, index):
         if index.column() == 0:
             return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable
-        return Qt.ItemFlag.ItemIsEnabled
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
     def setData(self, index, value, role):
         if role == Qt.ItemDataRole.CheckStateRole and index.column() == 0:
@@ -241,8 +209,24 @@ class TaskModel(QtCore.QAbstractTableModel):
             else:
                 self.tasks[index.row()][0] = False
             return True
+        if role == Qt.ItemDataRole.EditRole:
+            if index.column() == 3:
+                self.tasks[index.row()][3] = value
+            elif index.column() == 1:
+                try: 
+                    dt = datetime.strptime(value, "%m-%d-%Y")
+                    self.tasks[index.row()][1] = dt
+                    return True
+                except:
+                    return False
+        return False
 
     def refresh(self):
         self.tasks = [t for t in self.tasks if not t[0]]
         self.layoutChanged.emit()
+
+    def addTask(self, info):
+        self.tasks.append([False, datetime.today(), info[0], "Task Description", info[1]])
+        self.layoutChanged.emit()
+        
 
