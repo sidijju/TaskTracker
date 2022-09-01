@@ -1,46 +1,33 @@
-from functools import partial
-from PyQt6 import QtCore, QtGui, QtWidgets
-from PyQt6.QtGui import QPainter, QPainterPath, QBrush, QPen, QColor, QFontMetrics
-from PyQt6.QtCore import QSize, Qt, QRectF, QSortFilterProxyModel
+from PyQt6 import QtCore, QtGui
+from PyQt6.QtGui import QPainter, QPainterPath, QBrush, QPen, QColor
+from PyQt6.QtCore import QSize, Qt, QRectF
 from PyQt6.QtWidgets import (
-    QApplication,
     QHBoxLayout,
-    QLabel,
-    QMainWindow,
     QPushButton,
     QLineEdit,
     QComboBox,
-    QStackedLayout,
     QVBoxLayout,
     QWidget,
-    QListView,
     QTableView
 )
 from datetime import datetime
 
-import faulthandler
-
-faulthandler.enable()
-
 class CategoryWidget(QWidget):
 
-    def __init__(self, model):
+    def __init__(self, model, categories=[], colors=[]):
         super().__init__()
-
-        #TODO: load past categories and colors from database
-        self.categories = []
-        self.colors = []
-        self.categoryButtons = {}
+        
         self.model = model
-
-        for i in range(len(self.categories)):
-            b = RoundedButton(self.categories[i], self.colors[i])
-            b.clicked.connect(lambda: self.model.addTask((self.categories[i], self.colors[i])))
-            self.categoryButtons[self.categories[i]] = b
+        self.categories = categories
+        self.colors = colors
+        self.buttons = []
 
         self.layout = QHBoxLayout()
-        for button in self.categoryButtons.values():
-            self.layout.addWidget(button)
+        for i in range(len(self.categories)):
+            self.buttons.append(RoundedButton(self.categories[i], self.colors[i]))
+            self.buttons[i].clicked.connect(self.buttons[i].emit)
+            self.buttons[i].infoSignal.connect(self.model.addTask)
+            self.layout.addWidget(self.buttons[i])
 
         self.setLayout(self.layout)        
 
@@ -53,11 +40,13 @@ class CategoryWidget(QWidget):
         self.w.close()
         self.w = None
         button = RoundedButton(info[0], info[1])
-        button.clicked.connect(lambda: self.model.addTask(info))
-        self.categoryButtons[info[0]] = button
+        button.clicked.connect(button.emit)
+        button.infoSignal.connect(self.model.addTask)
+        self.categories.append(info[0])
+        self.colors.append(info[1])
         self.layout.addWidget(button)
+        self.buttons.append(button)
         self.update()        
-
 class AddCategoryWindow(QWidget):
 
     categoryInfo = QtCore.pyqtSignal(object)
@@ -100,6 +89,9 @@ class AddCategoryWindow(QWidget):
     def returnInfo(self):
         self.categoryInfo.emit((self.name, self.color))
 class RoundedButton(QPushButton):
+
+    infoSignal = QtCore.pyqtSignal(object)
+
     def __init__(self, text, color):
         super(RoundedButton, self).__init__()
         self.label = text
@@ -131,6 +123,9 @@ class RoundedButton(QPushButton):
         painter.setPen(QPen(QColor('white')))
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, self.label)
         painter.end()
+
+    def emit(self):
+        self.infoSignal.emit((self.label, self.color))
 class TaskListWidget(QWidget):
 
     def __init__(self, model):
@@ -150,7 +145,6 @@ class TaskListWidget(QWidget):
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.taskList)
         self.setLayout(self.layout)
-
 class TaskModel(QtCore.QAbstractTableModel):
     def __init__(self, *args, tasks=None, cols=None, **kwargs):
         super(TaskModel, self).__init__(*args, **kwargs)
@@ -182,7 +176,9 @@ class TaskModel(QtCore.QAbstractTableModel):
         return len(self.tasks)
 
     def columnCount(self, index):
-        return len(self.tasks[0])-1
+        if self.tasks:
+            return len(self.tasks[0])-1
+        return 4
 
     def headerData(self, section, orientation, role):
         if role == Qt.ItemDataRole.DisplayRole:
@@ -217,8 +213,8 @@ class TaskModel(QtCore.QAbstractTableModel):
                     return False
         return False
 
-    def refresh(self):
-        self.tasks = [t for t in self.tasks if not t[0]]
+    def save(self):
+        self.tasks = [t for t in self.tasks if not t[0]]    
         self.layoutChanged.emit()
 
     def addTask(self, info):

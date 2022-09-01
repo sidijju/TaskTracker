@@ -1,20 +1,12 @@
-from PyQt6 import QtCore, QtGui, QtWidgets
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtCore import QSize
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
     QVBoxLayout,
     QWidget,
 )
-from PyQt6.QtGui import QPalette, QColor
 from widgets import *
-from datetime import datetime
-import sys
-
-def trace(frame, event, arg):
-    print("%s, %s:%d" % (event, frame.f_code.co_filename, frame.f_lineno))
-    return trace
-
+import json
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -22,27 +14,46 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Task Tracker")
         self.setFixedSize(QSize(500, 400))
 
-        #TODO: load all tasks from database
-        tasks = [[False, datetime(2019, 5, 4), 'class 1', 'task 1', 'red'],
-                 [False, datetime(2022, 5, 4), 'class 2', 'task 2', 'blue']]
-        self.model = TaskModel(tasks=tasks, cols=['', 'Due Date', 'Category', 'Description', 'Color'])
+        self.load()
+        self.model.layoutChanged.connect(self.save)
 
         layout = QVBoxLayout()
         layout.addWidget(TaskListWidget(self.model))
         hlayout = QHBoxLayout()
-        catwidget = CategoryWidget(self.model)
-        refresh = RoundedButton("Refresh", "red")
-        refresh.clicked.connect(self.model.refresh)
+        self.catwidget = CategoryWidget(self.model, self.categories, self.colors)
+        refresh = RoundedButton("Save", "red")
+        refresh.clicked.connect(self.model.save)
         hlayout.addWidget(refresh)
         addCategory = RoundedButton("Add Category", 'gray')
-        addCategory.clicked.connect(catwidget.addCategoryWindow)
+        addCategory.clicked.connect(self.catwidget.addCategoryWindow)
+        addCategory.clicked.connect(self.model.save)
         hlayout.addWidget(addCategory)
         layout.addLayout(hlayout)
-        layout.addWidget(catwidget)
+        layout.addWidget(self.catwidget)
 
         widget = QWidget()
         widget.setLayout(layout)
         self.setCentralWidget(widget)
+
+    def load(self):
+        try:
+            with open ('data.json') as f:
+                data = json.load(f)
+                self.categories = data['categories']
+                self.colors = data['colors']
+                tasks = data['tasks']
+                for t in tasks:
+                    t[1] = datetime.strptime(t[1][:10], "%Y-%m-%d")
+                self.model = TaskModel(tasks=tasks, cols=['', 'Due Date', 'Category', 'Description', 'Color'])
+        except:
+            self.model = TaskModel(tasks=[], cols=['', 'Due Date', 'Category', 'Description', 'Color'])
+            self.categories = []
+            self.colors = []
+
+    def save(self):
+        with open('data.json', 'w') as f:
+            jsondata = {'tasks': self.model.tasks, 'categories': self.catwidget.categories, 'colors': self.catwidget.colors}
+            json.dump(jsondata, f, default=str)
 
 app = QApplication([])
 
@@ -51,5 +62,4 @@ window = MainWindow()
 window.show()  # IMPORTANT!!!!! Windows are hidden by default.
 
 # Start the event loop.
-#sys.settrace(trace)
 app.exec()
