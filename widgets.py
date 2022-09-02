@@ -24,6 +24,42 @@ class CategoryWidget(QWidget):
 
         self.globalLayout = QVBoxLayout()
         self.layouts = []
+        self.updateLayouts()
+        self.setLayout(self.globalLayout)        
+
+    def addCategoryWindow(self):
+        self.w = AddCategoryWindow()
+        self.w.show()
+        self.w.categoryInfo.connect(self.addCategoryButton)
+    
+    def addCategoryButton(self, info):
+        #close window
+        self.w.close()
+        self.w = None
+        #make button
+        button = RoundedButton(info[0], info[1])
+        button.clicked.connect(button.emit)
+        button.infoSignal.connect(self.model.addTask)
+        #add context menu to button
+
+
+        # append info to relevant trackers
+        self.categories.append(info[0])
+        self.colors.append(info[1])
+        self.buttons.append(button)
+
+        #update layout
+        if len(self.layouts) == 0 or self.layouts[-1].count() >= 3:
+            layout = QHBoxLayout()
+            layout.addWidget(button)
+            self.globalLayout.addLayout(layout)
+            self.layouts.append(layout)
+        self.layouts[-1].addWidget(button)
+
+        #update view
+        self.update()       
+
+    def updateLayouts(self):
         layout = None
         for i in range(len(self.categories)):
             if i % 3 == 0:
@@ -41,31 +77,7 @@ class CategoryWidget(QWidget):
 
         for layout in self.layouts:
             self.globalLayout.addLayout(layout)
-
-        self.setLayout(self.globalLayout)        
-
-    def addCategoryWindow(self):
-        self.w = AddCategoryWindow()
-        self.w.show()
-        self.w.categoryInfo.connect(self.addCategoryButton)
-    
-    def addCategoryButton(self, info):
-        self.w.close()
-        self.w = None
-        button = RoundedButton(info[0], info[1])
-        button.clicked.connect(button.emit)
-        button.infoSignal.connect(self.model.addTask)
-        self.categories.append(info[0])
-        self.colors.append(info[1])
-        self.buttons.append(button)
-        if len(self.layouts) == 0 or self.layouts[-1].count() >= 3:
-            layout = QHBoxLayout()
-            layout.addWidget(button)
-            self.globalLayout.addLayout(layout)
-            self.layouts.append(layout)
-
-        self.layouts[-1].addWidget(button)
-        self.update()        
+     
 class AddCategoryWindow(QWidget):
 
     categoryInfo = QtCore.pyqtSignal(object)
