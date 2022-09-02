@@ -7,14 +7,13 @@ from PyQt6.QtWidgets import (
 )
 from widgets import *
 import json
-import qdarktheme
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle("Task Tracker")
         self.setFixedWidth(500)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowOpacity(0.8)
 
         #load data from json file
@@ -64,7 +63,6 @@ class MainWindow(QMainWindow):
             json.dump(jsondata, f, default=str)
 
 app = QApplication([])
-app.setStyleSheet(qdarktheme.load_stylesheet(border="sharp"))
 # Create a Qt widget, which will be our window.
 window = MainWindow()
 window.show()  # IMPORTANT!!!!! Windows are hidden by default.

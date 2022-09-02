@@ -1,6 +1,6 @@
 from PyQt6 import QtCore, QtGui
-from PyQt6.QtGui import QPainter, QPainterPath, QBrush, QPen, QColor
-from PyQt6.QtCore import Qt, QRectF
+from PyQt6.QtGui import QPainter, QPainterPath, QBrush, QPen, QColor, QAction
+from PyQt6.QtCore import Qt, QRectF, QEvent
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QPushButton,
@@ -8,7 +8,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QTableView,
-    QColorDialog
+    QColorDialog,
+    QMenu
 )
 from datetime import datetime
 
@@ -21,11 +22,9 @@ class CategoryWidget(QWidget):
         self.categories = categories
         self.colors = colors
         self.buttons = []
-
         self.globalLayout = QVBoxLayout()
-        self.layouts = []
-        self.updateLayouts()
-        self.setLayout(self.globalLayout)        
+        self.setLayout(self.globalLayout)  
+        self.updateLayouts()      
 
     def addCategoryWindow(self):
         self.w = AddCategoryWindow()
@@ -40,8 +39,7 @@ class CategoryWidget(QWidget):
         button = RoundedButton(info[0], info[1])
         button.clicked.connect(button.emit)
         button.infoSignal.connect(self.model.addTask)
-        #add context menu to button
-
+        button.installEventFilter(self)
 
         # append info to relevant trackers
         self.categories.append(info[0])
@@ -59,7 +57,20 @@ class CategoryWidget(QWidget):
         #update view
         self.update()       
 
+    def removeCategoryButton(self, button):
+        if button in self.buttons:
+            idx = self.buttons.index(button)
+            self.model.deleteCategory(self.categories[idx])
+            self.buttons[idx].deleteLater()
+            del self.buttons[idx]
+            del self.categories[idx]
+            del self.colors[idx]
+            self.model.layoutChanged.emit()
+            self.updateLayouts()
+    
     def updateLayouts(self):
+        self.clearLayout()
+        self.layouts = []
         layout = None
         for i in range(len(self.categories)):
             if i % 3 == 0:
@@ -67,9 +78,12 @@ class CategoryWidget(QWidget):
                     self.layouts.append(layout)
                 layout = QHBoxLayout()
 
-            self.buttons.append(RoundedButton(self.categories[i], self.colors[i]))
-            self.buttons[i].clicked.connect(self.buttons[i].emit)
-            self.buttons[i].infoSignal.connect(self.model.addTask)
+            if i <= len(self.buttons):
+                self.buttons.append(RoundedButton(self.categories[i], self.colors[i]))
+                self.buttons[i].clicked.connect(self.buttons[i].emit)
+                self.buttons[i].infoSignal.connect(self.model.addTask)
+                self.buttons[i].installEventFilter(self)
+            
             layout.addWidget(self.buttons[i])
 
         if layout is not None:
@@ -77,7 +91,33 @@ class CategoryWidget(QWidget):
 
         for layout in self.layouts:
             self.globalLayout.addLayout(layout)
+
+    def clearLayout(self):
+        while self.globalLayout.count():
+            child = self.globalLayout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+            else:
+                while child.count():
+                    grandchild = child.takeAt(0)
+                    if grandchild.widget():
+                        child.removeWidget(grandchild.widget())
      
+    def eventFilter(self, source, event):
+        if event.type() == QEvent.Type.ContextMenu and source in self.buttons:
+            menu = QMenu()
+
+            removeAction = QAction("Remove category", self)
+            removeAction.setStatusTip("Remove this button and the corresponding category")
+            removeAction.triggered.connect(lambda: self.removeCategoryButton(source))
+            menu.addAction(removeAction)
+
+            #TODO complete rename category action
+            menu.addAction('Rename Category')
+
+            menu.exec(event.globalPos())
+
+        return super().eventFilter(source, event)
 class AddCategoryWindow(QWidget):
 
     categoryInfo = QtCore.pyqtSignal(object)
@@ -246,9 +286,13 @@ class TaskModel(QtCore.QAbstractTableModel):
         self.tasks = [t for t in self.tasks if not t[0]]    
         self.layoutChanged.emit()
 
-    #TODO
-    def deleteCategories(self):
-        pass
+    def deleteCategory(self, category):
+        i = 0
+        while i < len(self.tasks):
+            if self.tasks[i][2] == category:
+                del self.tasks[i]
+            else:
+                i += 1
 
     def addTask(self, info):
         self.tasks.append([False, datetime.today(), info[0], "Task Description", info[1]])
