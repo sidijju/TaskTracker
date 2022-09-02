@@ -12,22 +12,32 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Task Tracker")
-        self.setFixedSize(QSize(500, 400))
+        self.setFixedWidth(500)
+        self.setWindowOpacity(0.8)
 
+        #load data from json file
         self.load()
         self.model.layoutChanged.connect(self.save)
 
-        layout = QVBoxLayout()
-        layout.addWidget(TaskListWidget(self.model))
+        #save buttun
         hlayout = QHBoxLayout()
         self.catwidget = CategoryWidget(self.model, self.categories, self.colors)
-        refresh = RoundedButton("Save", "green")
+        refresh = RoundedButton("Save", "gray")
         refresh.clicked.connect(self.model.save)
         hlayout.addWidget(refresh)
-        addCategory = RoundedButton("Add Category", 'gray')
+
+        #add category
+        addCategory = RoundedButton("Add Category", 'green')
         addCategory.clicked.connect(self.catwidget.addCategoryWindow)
         addCategory.clicked.connect(self.model.save)
         hlayout.addWidget(addCategory)
+
+        #TODO remove category button
+        removeCategory = RoundedButton("Remove Category", 'red')
+        hlayout.addWidget(removeCategory)
+
+        layout = QVBoxLayout()
+        layout.addWidget(TaskListWidget(self.model))
         layout.addLayout(hlayout)
         layout.addWidget(self.catwidget)
 

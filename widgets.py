@@ -1,11 +1,10 @@
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtGui import QPainter, QPainterPath, QBrush, QPen, QColor
-from PyQt6.QtCore import QSize, Qt, QRectF
+from PyQt6.QtCore import Qt, QRectF
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QPushButton,
     QLineEdit,
-    QComboBox,
     QVBoxLayout,
     QWidget,
     QTableView,
@@ -23,14 +22,27 @@ class CategoryWidget(QWidget):
         self.colors = colors
         self.buttons = []
 
-        self.layout = QHBoxLayout()
+        self.globalLayout = QVBoxLayout()
+        self.layouts = []
+        layout = None
         for i in range(len(self.categories)):
+            if i % 3 == 0:
+                if layout is not None:
+                    self.layouts.append(layout)
+                layout = QHBoxLayout()
+
             self.buttons.append(RoundedButton(self.categories[i], self.colors[i]))
             self.buttons[i].clicked.connect(self.buttons[i].emit)
             self.buttons[i].infoSignal.connect(self.model.addTask)
-            self.layout.addWidget(self.buttons[i])
+            layout.addWidget(self.buttons[i])
 
-        self.setLayout(self.layout)        
+        if layout is not None:
+            self.layouts.append(layout)    
+
+        for layout in self.layouts:
+            self.globalLayout.addLayout(layout)
+
+        self.setLayout(self.globalLayout)        
 
     def addCategoryWindow(self):
         self.w = AddCategoryWindow()
@@ -45,8 +57,14 @@ class CategoryWidget(QWidget):
         button.infoSignal.connect(self.model.addTask)
         self.categories.append(info[0])
         self.colors.append(info[1])
-        self.layout.addWidget(button)
         self.buttons.append(button)
+        if len(self.layouts) == 0 or self.layouts[-1].count() >= 3:
+            layout = QHBoxLayout()
+            layout.addWidget(button)
+            self.globalLayout.addLayout(layout)
+            self.layouts.append(layout)
+
+        self.layouts[-1].addWidget(button)
         self.update()        
 class AddCategoryWindow(QWidget):
 
@@ -65,6 +83,7 @@ class AddCategoryWindow(QWidget):
 
         #color selector
         self.dialog = QColorDialog()
+        self.color = 'black'
         self.colorSelector = QPushButton("Select Color")
         self.colorSelector.clicked.connect(self.showColorDialog)
 
@@ -136,7 +155,7 @@ class TaskListWidget(QWidget):
         self.taskList.setModel(model)
 
         #aesthetic
-        self.taskList.setMinimumSize(100, 100)
+        self.taskList.setMinimumSize(100, 50)
         self.taskList.setColumnWidth(0, 30)
         self.taskList.horizontalHeader().setStretchLastSection(True)
 
@@ -214,6 +233,10 @@ class TaskModel(QtCore.QAbstractTableModel):
     def save(self):
         self.tasks = [t for t in self.tasks if not t[0]]    
         self.layoutChanged.emit()
+
+    #TODO
+    def deleteCategories(self):
+        pass
 
     def addTask(self, info):
         self.tasks.append([False, datetime.today(), info[0], "Task Description", info[1]])
