@@ -7,6 +7,10 @@ from PyQt6.QtWidgets import (
 )
 from widgets import *
 import json
+import os
+
+basedir = os.path.dirname(__file__)
+datafile = os.path.join(basedir, "data", "data.json")
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -44,7 +48,7 @@ class MainWindow(QMainWindow):
 
     def load(self):
         try:
-            with open ('data.json') as f:
+            with open (datafile, 'r') as f:
                 data = json.load(f)
                 self.categories = data['categories']
                 self.colors = data['colors']
@@ -58,7 +62,7 @@ class MainWindow(QMainWindow):
             self.colors = []
 
     def save(self):
-        with open('data.json', 'w') as f:
+        with open(datafile, 'w') as f:
             jsondata = {'tasks': self.model.tasks, 'categories': self.catwidget.categories, 'colors': self.catwidget.colors}
             json.dump(jsondata, f, default=str)
 
