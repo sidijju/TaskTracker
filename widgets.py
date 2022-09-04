@@ -60,14 +60,14 @@ class CategoryWidget(QWidget):
     def removeCategoryButton(self, button):
         if button in self.buttons:
             idx = self.buttons.index(button)
-            self.model.deleteCategory(self.categories[idx])
+            self.model.removeCategory(self.categories[idx])
             self.buttons[idx].deleteLater()
             del self.buttons[idx]
             del self.categories[idx]
             del self.colors[idx]
             self.model.layoutChanged.emit()
             self.updateLayouts()
-    
+
     def updateLayouts(self):
         self.clearLayout()
         self.layouts = []
@@ -111,9 +111,6 @@ class CategoryWidget(QWidget):
             removeAction.setStatusTip("Remove this button and the corresponding category")
             removeAction.triggered.connect(lambda: self.removeCategoryButton(source))
             menu.addAction(removeAction)
-
-            #TODO complete rename category action
-            menu.addAction('Rename Category')
 
             menu.exec(event.globalPos())
 
@@ -286,7 +283,7 @@ class TaskModel(QtCore.QAbstractTableModel):
         self.tasks = [t for t in self.tasks if not t[0]]    
         self.layoutChanged.emit()
 
-    def deleteCategory(self, category):
+    def removeCategory(self, category):
         i = 0
         while i < len(self.tasks):
             if self.tasks[i][2] == category:
